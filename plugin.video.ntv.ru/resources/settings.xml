@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+    <setting label="30203" type="slider" id="limit" default="20" range="5,5,100" option="int" />
+    <setting type="sep"/>
+    <setting label="30210" type="enum" id="video_quality" lvalues="30211|30212" default="1"/>
+</settings>
