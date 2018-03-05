@@ -4,6 +4,7 @@
 
 from __future__ import unicode_literals
 from future.utils import iteritems
+import time
 
 import xbmc
 import xbmcgui
@@ -16,6 +17,8 @@ from resources.lib.ntv import *
 # Create plugin instance
 plugin = RoutedPlugin()
 _ = plugin.initialize_gettext()
+
+use_subtitles = plugin.get_setting('use_subtitles')
 
 def _init_api():
     return NTV()
@@ -89,7 +92,7 @@ def _list_programs(data, genre_id):
                               },
                      'art': {'poster': program['img'],
                              },
-                     'fanart': program['img'],
+                     'fanart': plugin.fanart,
                      'thumb':  program['img'],
                      'content_lookup': False,
                      'is_folder': True,
@@ -151,7 +154,7 @@ def _list_seasons(data):
                               },
                      'art': {'poster': data['img'],
                              },
-                     'fanart': data['img'],
+                     'fanart': plugin.fanart,
                      'thumb':  data['img'],
                      'content_lookup': False,
                      'is_folder': True,
@@ -173,52 +176,28 @@ def program_episodes(prog_id, archive_id):
     episodes_info = _api.browse_episodes(prog_id, archive_id)
 
     create_directory(_list_episodes(episodes_info), content='episodes', category=episodes_info['title'],
-                     total_items=episodes_info['count'], sort_methods=_get_sort_methods('episodes'))
+                     total_items=episodes_info['count'], sort_methods=_get_sort_methods('episodes', 'date'))
 
 def _list_episodes(data):
     mediatype = 'episode'
     for episode in data['list']:
-        url = plugin.url_for('play_video', video_id=episode['id'])
-
-        list_item = {'label': episode['title'],
-                     'info': {'video': {#'date': date,
-                                        #'country': country,
-                                        #'year': year,
-                                        'season': episode['season'],
-                                        'sortseason': episode['season'],
-                                        'episode': episode['episode'],
-                                        'sortepisode': episode['episode'],
-                                        'title': episode['title'],
-                                        'originaltitle': episode['title'],
-                                        'tvshowtitle': episode['program_title'],
-                                        'sorttitle': episode['title'],
-                                        'plotoutline': data['annotation'],
-                                        'plot': episode['description'],
-                                        'mpaa': episode['rating']['mpaa'],
-                                        #'director': body.get('director', []),
-                                        #'writer': body.get('writer', []),
-                                        #'credits': body.get('credits', []),
-                                        'mediatype': mediatype,
-                                        }
-                              },
-                     'art': {'poster': episode['img'],
-                             },
-                     'fanart': episode['img'],
-                     'thumb':  episode['img'],
-                     'content_lookup': False,
-                     'is_folder': False,
-                     'is_playable': True,
-                     'url': url,
-                     'path': url,
-                     }
+        
+        list_item = _get_item(data, episode)
         yield list_item
 
 def _get_item(data, episode):
     mediatype = 'episode'
+    url = plugin.url_for('play_video', video_id=episode['id'])
+
+    context_menu = []
+    #download_url = plugin.url_for('download_video', video_id=episode['id'])
+    #context_menu.append( (_('Download'), 'RunPlugin(%s)' % download_url) )   
+    
+    st_time = time.gmtime(episode['timestamp'])     
     list_item = {'label': episode['title'],
-                 'info': {'video': {#'date': date,
+                 'info': {'video': {'date': time.strftime('%d.%m.%Y', st_time),
                                     #'country': country,
-                                    #'year': year,
+                                    'year': st_time[0],
                                     'season': episode['season'],
                                     'sortseason': episode['season'],
                                     'episode': episode['episode'],
@@ -230,7 +209,9 @@ def _get_item(data, episode):
                                     'plotoutline': data.get('annotation', ''),
                                     'plot': episode['description'],
                                     'mpaa': episode['rating']['mpaa'],
-                                    #'director': body.get('director', []),
+                                    'duration': episode['duration'],
+                                    'premiered': time.strftime('%Y-%m-%d', st_time),
+                                    'dateadded': time.strftime('%Y-%m-%d %H:%M:%S', st_time),
                                     #'writer': body.get('writer', []),
                                     #'credits': body.get('credits', []),
                                     'mediatype': mediatype,
@@ -238,12 +219,20 @@ def _get_item(data, episode):
                           },
                  'art': {'poster': episode['img'],
                          },
-                 'fanart': episode['img'],
+                 'fanart': plugin.fanart,
                  'thumb':  episode['img'],
                  'content_lookup': False,
                  'is_folder': False,
                  'is_playable': True,
+                 'context_menu': context_menu,
+                 'url': url,
+                 'path': url,
                  }
+
+    if use_subtitles \
+      and episode['subtitles'] is not None:
+        list_item['subtitles'] = [episode['subtitles']]
+
     return list_item
     
 @plugin.route('/video/<video_id>')
@@ -252,6 +241,19 @@ def play_video(video_id):
     list_item = _get_item(video_info, video_info['item']) 
     list_item['path'] = _get_video_path(video_info)
     resolve_url(list_item)
+    
+@plugin.route('/download/<video_id>')
+def download_video(video_id):
+    import SimpleDownloader as downloader
+    downloader = downloader.SimpleDownloader()
+
+    video_info = _api.get_video_info(video_id)
+    item = video_info['item']
+    params = {'url': _get_video_path(video_info),
+              'Title': item['title'],
+              'download_path': 'd:\\',
+              }
+    downloader.download('test_1.mp4', params)
 
 def _get_video_path(data):
 
@@ -271,7 +273,7 @@ def _get_sort_methods( cat, sort='' ):
     if cat == 'episodes' \
       and not plugin.get_setting("use_atl_names"):
         if sort == 'date':
-            sort_methods.append(xbmcplugin.SORT_METHOD_DATE)
+            sort_methods.append(xbmcplugin.SORT_METHOD_DATEADDED)
         else:
             sort_methods.append(xbmcplugin.SORT_METHOD_EPISODE)
     elif cat == 'search':
@@ -308,8 +310,10 @@ def create_list_item(item):
                   and isinstance(item['info']['video'][fields], list):
                     item['info']['video'][fields] = ' / '.join(item['info']['video'][fields])
     if major_version < '15':
-        if item['info']['video'].get('duration'):
-            item['info']['video']['duration'] = (item['info']['video']['duration'] / 60)
+        if item.get('info') \
+          and item['info'].get('video'):
+            if item['info']['video'].get('duration'):
+                item['info']['video']['duration'] = (item['info']['video']['duration'] / 60)
 
     if major_version >= '16':
         art = item.get('art', {})

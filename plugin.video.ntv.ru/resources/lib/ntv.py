@@ -178,17 +178,23 @@ class NTV(object):
             json = self._extract_json(r)
     
             data = json['data']
-            archive = data['archive']
+            archive = data.get('archive')
+            if archive is None:
+                break
+
+            issue_count = archive['issue_count']
             
             for issue in archive['issues']:
                 issues.append(issue)
             
-            if len(issues)+1 < archive['issue_count']:
-                u_params['offset'] += u_params['limit']
-            else:
-                break
+            u_params['offset'] += u_params['limit']
+            
+            if issue_count < u_params['offset']:
+                break 
 
-        result = {'count': archive['issue_count'],
+        issues.sort(key=NTV._sort_by_ts)
+
+        result = {'count': issue_count,
                   'title': data['title'],
                   'type': data['type'],
                   'shortcat': data['shortcat'],
@@ -203,23 +209,16 @@ class NTV(object):
     def _episode_list(issues):
 
         for issue in issues:
-            for video in issue['video_list']:
+            if len(issue['video_list']) == 1:
+                video = issue['video_list'][0]
                 yield NTV._video_item(issue, video)
+            else:
+                for part, video in enumerate(issue['video_list']):
+                    yield NTV._video_item(issue, video, part+1)
 
     @staticmethod
-    def _video_item(issue, video):
-        if video['comScore'].get('ns_st_en') is not None \
-          and video['comScore']['ns_st_en'] !="*null" :
-            episode = video['comScore']['ns_st_en'] 
-        else:
-            episode = ''
+    def _video_item(issue, video, part=None):
 
-        if video['comScore'].get('ns_st_sn') is not None\
-          and video['comScore']['ns_st_sn'] !="*null" :
-            season = video['comScore']['ns_st_sn'] 
-        else:
-            season = ''
-            
         item = {'program_title': issue.get('program_title', ''),
                 'title': issue.get('title', ''),
                 'description': issue.get('txt', ''),
@@ -227,12 +226,33 @@ class NTV(object):
                 'allowed': video['allowed'],
                 'img': video['img'],
                 'id': video['id'],
-                'episode': episode,
-                'season': season,
-                #'genre': video['comScore']['ns_st_ge'],
+                'timestamp': float(video['ts'])/1000
+                ,
+                'duration': video['tt'],
+                'subtitles': video.get('subtitles'),
+                'episode': NTV._comScore_val(video['comScore'], 'ns_st_en'),
+                'season': NTV._comScore_val(video['comScore'], 'ns_st_sn'),
+                'genre': NTV._comScore_val(video['comScore'], 'ns_st_ge'),
+                'part': part,
                 #'date': video['comScore']['ns_st_ddt'],
                 }
         return item
+
+    @staticmethod
+    def _sort_by_ts(item):
+        return item['ts']
+
+    @staticmethod
+    def _comScore_val(data, key):
+        data = data or {}
+        
+        if data.get(key) is not None \
+          and data[key] !="*null" :
+            value = data[key] 
+        else:
+            value = None
+        
+        return value
 
     def get_video_info(self, video_id):
 
@@ -260,206 +280,6 @@ class NTV(object):
             result = 1
         return result
 
-    def search( self, params ):
-
-        keyword = params['keyword'].replace('-', ' ')
-        keyword = keyword.replace('+', ' ')
-        keyword = keyword.replace('\\', ' ')
-        keyword = keyword.replace('/', ' ')
-        keyword = keyword.replace('!', '')
-        keyword = keyword.replace('#', '')
-        keyword = keyword.replace('№', '')
-
-        u_params = {'hasFullVideos': 'true',
-                    'offset':    params.get('offset', 0),
-                    'limit':  params.get('limit', self.default_limit),
-                    'sort': params.get('sort', 'date'),
-                    'search': keyword,
-                    }
-
-        r = self._http_request('search', u_params)
-        json = self._extract_json(r)
-
-        result = {'count': len(json['data']),
-                  'pages': json['pagination']['pages'],
-                  'list':  self._make_search_list(json, params)}
-        return result
-
-    def _make_video_list( self, json ):
-
-        for item in json['data']:
-            yield self._get_item_info(item)
-
-    def _make_search_list( self, json, params ):
-        full_list = params.get('full_list', True)
-        keyword = params['keyword']
-        
-        for item in json['data']:
-            if not full_list \
-              and not self._video_have_keyword(item, keyword):
-                continue
-            
-            yield self._get_item_info(item)
-
-    def _get_item_info(self, brand, video=None, date_episode=0):
-        if video is not None:
-            mediatype = 'episode'
-        else:
-            mediatype = 'tvshow' if (brand['countFullVideos'] > 1) else 'movie'
-
-        #Titles
-        brand_title = self._get_title(brand['title'])
-        brand_title_orig = self._get_title(brand.get('titleOrig')) if brand.get('titleOrig') else brand_title
-
-        year = brand['productionYearStart']
-        mpaa = self._get_mpaa(brand['ageRestrictions'])
-        
-        country = []
-        for _country in brand['countries']:
-            country.append(_country['title'])
-        
-        body = self._parse_body(brand['body'])
-
-        if mediatype in ['tvshow', 'movie']:
-            
-            date = '%s.%s.%s' % (brand['dateRec'][0:2], brand['dateRec'][3:5], brand['dateRec'][6:10])
-            
-            picture = brand['pictures'][random.randint(0, len(brand['pictures'])-1)]
-            banner = self._get_image(picture, u'prm')
-            poster = self._get_image(picture, u'bq')
-    
-            picture = brand['pictures'][random.randint(0, len(brand['pictures'])-1)]
-            thumb = self._get_image(picture, u'hdr')
-            fanart = thumb
-
-            tags = []
-            for _tag in brand['tags']:
-                tags.append(_tag['title'])
-
-            video_info = {'type': mediatype,
-                          'brand_id': brand['id'],
-                          'sort': brand['sortBy'],
-                          'count': brand['countFullVideos'],
-                          'title': brand_title,
-                          'have_trailer': brand['countVideos'] > brand['countFullVideos'],
-                          'originaltitle': brand_title_orig,
-                          }
-    
-            item_info = {'label': brand_title,
-                         'cast': body.get('cast', []),
-                         'info': {'video': {'date': date,
-                                            'country': country,
-                                            'year': year,
-                                            'title': brand_title,
-                                            'originaltitle': brand_title_orig,
-                                            'sorttitle': brand_title,
-                                            'plotoutline': brand['anons'],
-                                            'plot': body['plot'],
-                                            'mpaa': mpaa,
-                                            'director': body.get('director', []),
-                                            'writer': body.get('writer', []),
-                                            'credits': body.get('credits', []),
-                                            'mediatype': mediatype,
-                                            'tag': tags,
-                                            }
-                                  },
-                         'art': {'poster': poster,
-                                 'banner': banner
-                                 },
-                         'fanart': fanart,
-                         'thumb':  thumb,
-                         'content_lookup': False,
-                         }
-        elif mediatype == 'episode':
-    
-            #Defaults
-            poster = self._get_image(video['pictures'], u'bq')
-            thumb = self._get_image(video['pictures'], u'hdr')
-            fanart = thumb
-    
-            episode_title = self._get_title(video['episodeTitle'])
-    
-            #Date
-            date = '%s.%s.%s' % (video['dateRec'][0:2], video['dateRec'][3:5], video['dateRec'][6:10])
-            aired = '%s-%s-%s' % (video['dateRec'][6:10], video['dateRec'][3:5], video['dateRec'][0:2])
-    
-            episode = video['series'] if video['series'] != 0 else date_episode
-            season = self._get_season(brand['title'])
-    
-            tags = []
-            for _tag in video['tags']:
-                tags.append(_tag['title'])
-
-            video_info = {'type': mediatype,
-                          'brand_id': video['brandId'],
-                          'episode': episode,
-                          'season': season,
-                          'video_id': video['id'],
-                          'title': brand_title,
-                          'originaltitle': brand_title_orig,
-                          }
-    
-            if episode == 0:
-                season = 0
-    
-            item_info = {'cast': body.get('cast', []),
-                         'info': {'video': {'date': date,
-                                            'country': country,
-                                            'year': year,
-                                            'sortepisode': episode,
-                                            'sortseason': season,
-                                            'director': body.get('director', []),
-                                            'season': season,
-                                            'episode': episode,
-                                            'tvshowtitle': brand_title,
-                                            'plot': video['anons'],
-                                            'mpaa': mpaa,
-                                            'title': episode_title,
-                                            'sorttitle': episode_title,
-                                            'duration': video['duration'],
-                                            'writer': body.get('writer', []),
-                                            'aired': aired,
-                                            'mediatype': mediatype,
-                                            'tag': tags,
-                                            }
-                                  },
-                         'art': {'poster': poster},
-                         'fanart': fanart,
-                         'thumb':  thumb,
-                         'content_lookup': False,
-                        }
-            
-        video_info = {'item_info':  item_info,
-                      'video_info': video_info
-                      }
-
-        return video_info
-
-    def get_trailer_url( self, params ):
-
-        brand_info = self._get_brand_data(params)
-
-        url_params = {'#brand_id': str(params['brand_id'])}
-        
-        for item_type in [3, 2]:
-            u_params = {'limit': brand_info['countVideos'],
-                        'type': item_type,
-                        }
-    
-            r = self._http_request('videos', u_params, url_params=url_params)
-            json = self._extract_json(r)
-            if json['data']:
-                while json['data']:
-                    video = json['data'][random.randint(0, len(json['data'])-1)]
-                    if video['series'] == 0 \
-                      and video['duration'] <= 600:
-                        return self._get_video_url(video)
-                    else:
-                        json['data'].remove(video)
-        
-        raise NTVApiError('Trailer not found')
-
-
     @staticmethod
     def _get_rating(rating):
         rars = rating['v']
@@ -483,19 +303,11 @@ class NTV(object):
         
         return result
 
-    def _video_have_keyword(self, item, keyword):
-        title = self._get_title(item['title'])
-        originaltitle = self._get_title(item.get('titleOrig')) if item.get('titleOrig') else title
-
-        kw = keyword.decode('utf-8').lower()
-    
-        result = (title.decode('utf-8').lower().find(kw) >= 0 or originaltitle.decode('utf-8').lower().find(kw) >= 0)
-    
-        return result
-
 if __name__ == '__main__':
+    import time
     ntv = NTV()
     genres = ntv.get_genres()
+    #genres = [{'id':10, 'title': 'Auto'}]
     for genre in genres:
         print('id-{0}, title-{1}'.format(genre['id'], genre['title']))
         programs_info = ntv.browse_programs(genre['id'], {'limit': 1})
@@ -507,5 +319,8 @@ if __name__ == '__main__':
                 episodes_info = ntv.browse_episodes(program['shortcat'], season['id'])
                 for episode in episodes_info['list']:
                     print(episode['title'])
-                    video_info = ntv.get_video_info(episode['id'])
-                    print(video_info['video'])
+                    print(episode['timestamp'])
+                    st_time = time.gmtime(float(episode['timestamp']))     
+                    print(time.strftime('%Y-%m-%d', st_time))
+#                    video_info = ntv.get_video_info(episode['id'])
+#                    print(video_info['video'])

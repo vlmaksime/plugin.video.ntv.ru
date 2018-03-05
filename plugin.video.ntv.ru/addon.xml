@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="plugin.video.ntv.ru" version="0.1.1" name="НТВ" provider-name="vl.maksime">
+<addon id="plugin.video.ntv.ru" version="0.1.2~beta" name="НТВ" provider-name="vl.maksime">
     <requires>
         <import addon="xbmc.python" version="2.19.0"/>
         <import addon="script.module.requests"/>
         <import addon="script.module.simpleplugin3"/>
+        <!--import addon="script.module.simple.downloader"/-->
     </requires>
     <extension point="xbmc.python.pluginsource" library="default.py">
         <provides>video</provides>
