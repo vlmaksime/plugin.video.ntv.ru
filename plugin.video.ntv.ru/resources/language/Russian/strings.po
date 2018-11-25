@@ -42,17 +42,10 @@ msgctxt "#30016"
 msgid "Empty"
 msgstr "Пусто"
 
+#Part
 msgctxt "#30017"
-msgid "Sort"
-msgstr "Порядок"
-
-msgctxt "#30018"
-msgid "By release date"
-msgstr "По дате выхода"
-
-msgctxt "#30019"
-msgid "By alphabet"
-msgstr "По алфавиту"
+msgid "pt."
+msgstr "ч."
 
 msgctxt "#30041"
 msgid "Connection error"
@@ -89,3 +82,7 @@ msgstr "Низкое"
 msgctxt "#30212"
 msgid "High"
 msgstr "Высокое"
+
+msgctxt "#30215"
+msgid "Subtitles"
+msgstr "Субтитры"

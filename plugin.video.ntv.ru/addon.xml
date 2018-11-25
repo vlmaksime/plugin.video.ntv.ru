@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="plugin.video.ntv.ru" version="0.1.1" name="НТВ" provider-name="vl.maksime">
+<addon id="plugin.video.ntv.ru" version="0.2.1" name="НТВ" provider-name="vl.maksime">
     <requires>
         <import addon="xbmc.python" version="2.19.0"/>
         <import addon="script.module.requests"/>
-        <import addon="script.module.simpleplugin3"/>
+        <import addon="script.module.simplemedia"/>
     </requires>
     <extension point="xbmc.python.pluginsource" library="default.py">
         <provides>video</provides>
     </extension>
     <extension point="xbmc.addon.metadata">
-        <summary lang="en">.</summary>
+        <summary lang="en"></summary>
         <summary lang="ru">"НТВ" - является неофициальным дополнением для KODI.</summary>
         <description lang="en"></description>
         <description lang="ru">Дополнение позволяет смотреть самые качественные передачи, шоу, новости, сериалы, кино от ведущего российского телеканала. Более 24 часов видео ежедневно, днем и ночью. С помощью приложения вы сможете в любой момент быть в курсе всех событий, смотреть прямой телеэфир НТВ, полные выпуски и архив всех передач, которые когда-либо были показаны на экране.</description>
@@ -22,7 +22,7 @@
         <website>http://www.ntv.ru/</website>
         <email>vl.maksime@gmail.com</email>
         <source>https://github.com/vlmaksime/plugin.video.ntv.ru</source>
-        <news>v0.1.1 (2018-02-25)[CR]- Публичный релиз</news>
+        <news>v0.2.1 (2018-02-25)[CR]- Учтены изменения в API ресурса[CR][CR]v0.1.1 (2018-02-25)[CR]- Публичный релиз</news>
         <assets>
             <icon>icon.png</icon>
         </assets>
