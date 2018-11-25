@@ -86,7 +86,3 @@ msgstr "Высокое"
 msgctxt "#30215"
 msgid "Subtitles"
 msgstr "Субтитры"
-
-msgctxt "#30301"
-msgid "Download"
-msgstr "Скачать"
