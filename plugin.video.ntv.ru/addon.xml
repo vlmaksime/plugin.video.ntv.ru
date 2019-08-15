@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="plugin.video.ntv.ru" version="0.2.1" name="НТВ" provider-name="vl.maksime">
+<addon id="plugin.video.ntv.ru" version="0.2.2" name="НТВ" provider-name="vl.maksime">
     <requires>
         <import addon="xbmc.python" version="2.19.0"/>
-        <import addon="script.module.requests"/>
-        <import addon="script.module.simplemedia"/>
+        <import addon="script.module.requests" version="2.12.4"/>
+        <import addon="script.module.simplemedia" version="1.0.5"/>
     </requires>
     <extension point="xbmc.python.pluginsource" library="default.py">
         <provides>video</provides>
@@ -18,11 +18,11 @@
         <language>ru</language>
         <platform>all</platform>
         <license>GNU GENERAL PUBLIC LICENSE. Version 3, 29 June 2007</license>
-        <forum>http://xbmc.ru/forum/showthread.php?t=</forum>
+        <forum>http://xbmc.ru/forum/showthread.php?t=14937</forum>
         <website>http://www.ntv.ru/</website>
         <email>vl.maksime@gmail.com</email>
         <source>https://github.com/vlmaksime/plugin.video.ntv.ru</source>
-        <news>v0.2.1 (2018-02-25)[CR]- Учтены изменения в API ресурса[CR][CR]v0.1.1 (2018-02-25)[CR]- Публичный релиз</news>
+        <news>v0.2.2 (2019-08-15)[CR]- Исправлены выявленные ошибки[CR][CR]v0.2.1 (2018-02-25)[CR]- Учтены изменения в API ресурса[CR][CR]v0.1.1 (2018-02-25)[CR]- Публичный релиз</news>
         <assets>
             <icon>icon.png</icon>
         </assets>

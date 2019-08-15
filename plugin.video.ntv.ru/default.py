@@ -153,11 +153,12 @@ def program_seasons(prog_id):
 
     seasons_info = _api.browse_seasons(prog_id)
 
-    if seasons_info['count'] == 1:
-        for season in seasons_info['list']:
-            url = plugin.url_for('program_episodes', prog_id=seasons_info['shortcat'], archive_id=season['id'])
-            xbmc.executebuiltin('Container.Update("%s")' % url)
-            return
+#    if seasons_info['count'] == 1:
+#        for season in seasons_info['list']:
+#            url = plugin.url_for('program_episodes', prog_id=seasons_info['shortcat'], archive_id=season['id'])
+#            plugin.create_directory([], succeeded=False)
+#            xbmc.executebuiltin('Container.Update("%s")' % url)
+#            return
             
     plugin.create_directory(_list_seasons(seasons_info), content='seasons', category=seasons_info['title'])
 
