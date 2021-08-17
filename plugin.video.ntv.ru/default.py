@@ -50,7 +50,7 @@ def _list_root():
     try:
         genres = _get_genres()
     except ntv.NTVApiError as err:
-        _show_api_errosr(err)
+        _show_api_error(err)
         genres = []
 
 #     url = plugin.url_for('play_live')
@@ -86,8 +86,12 @@ def _list_root():
 
 @plugin.route('/genre/<genre_title>')
 def genre(genre_title):
-    params = {'offset': plugin.params.offset or 0,
-              'limit': plugin.params.limit or plugin.get_setting('limit'),
+
+    offset = plugin.params.offset or '0'
+    limit = plugin.params.limit or plugin.get_setting('limit', False)
+
+    params = {'offset': int(offset),
+              'limit': int(limit),
               }
     update_listing = (params['offset'] > 0)
     genre_id = _get_genre_id(genre_title)
